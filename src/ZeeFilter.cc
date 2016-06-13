@@ -72,19 +72,38 @@ ZeeFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   double pt, eta, phi;
 
   int last_charge = 0;
-  double last_pt = 0.0;
-  double last_eta = 0.0;
-  double last_phi = 0.0;
+  double last_pt, last_eta, last_phi;
 
-  // NEEDED: selection cuts, i.e. isolation, etc.
+  float sigmaEtaEta, hcalOverEcal, isoTrack, isoECAL, isoHCAL;
+  float last_sigmaEtaEta, last_hcalOverEcal, last_isoTrack, last_isoECAL, last_isoHCAL;
+
+  std::string type;
+  std::string last_type;
 
   for ( reco::GsfElectronCollection::const_iterator ei = electrons->begin(), eie = electrons->end();
         ei != eie; ++ei )
   {   
       pt = ei->pt();
+
+      if ( pt < 25 )
+        return false;
+
       eta = ei->eta();
       phi = ei->phi();
       charge = ei->charge();
+
+      sigmaEtaEta = ei->sigmaEtaEta();
+      hcalOverEcal = ei->hcalOverEcal();
+      
+      isoTrack = ei->dr04TkSumPt();
+      isoECAL = ei->dr04EcalRecHitSumEt(); 
+      isoHCAL = ei->dr04HcalTowerSumEt();
+
+      if ( ei->isEB() ) 
+        type = "EB";
+        
+      if ( ei->isEE() ) 
+        type = "EE";
 
       if ( last_charge == 0 ) // i.e. first of a potential pair
       {
@@ -92,12 +111,21 @@ ZeeFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
         last_pt = pt;
         last_eta = eta;
         last_phi = phi;
+
+        last_sigmaEtaEta = sigmaEtaEta;
+        last_hcalOverEcal = hcalOverEcal;
+
+        last_isoTrack = isoTrack;
+        last_isoECAL = isoECAL;
+        last_isoHCAL = isoHCAL;
+
+        last_type = type;
       }
       
       else 
       {
-        if ( charge == last_charge )
-          return false;
+        //if ( charge == last_charge )
+        //  return false;
         
         double M = 2*last_pt*pt*(cosh(last_eta-eta)-cos(last_phi-phi));
         M = sqrt(M);
@@ -106,9 +134,10 @@ ZeeFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
           return false;
 
         csvOut_<< iEvent.id().run() <<","<< iEvent.id().event() <<","
-               << last_pt <<","<< last_eta <<","<< last_phi <<","<< last_charge <<","
-               << pt <<","<< eta <<","<< phi <<","<< charge <<","
-               << M <<std::endl;
+               << last_pt <<","<< last_eta <<","<< last_phi <<","<< last_charge <<","<< last_type <<","
+               << last_sigmaEtaEta <<","<< last_hcalOverEcal <<","<< last_isoTrack <<","<< last_isoECAL <<","<< last_isoHCAL <<","
+               << pt <<","<< eta <<","<< phi <<","<< charge <<","<< type <<","
+               << sigmaEtaEta <<","<< hcalOverEcal <<","<< isoTrack <<","<< isoECAL <<","<< isoHCAL <<std::endl;
       }
   }
 
@@ -118,7 +147,7 @@ ZeeFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 void 
 ZeeFilter::beginJob()
 {
-  csvOut_<<"Run,Event,pt1,eta1,phi1,Q1,pt2,eta2,phi2,Q2,M"<<std::endl;
+  csvOut_<<"Run,Event,pt1,eta1,phi1,Q1,type1,sigmaEtaEta1,HoverE1,isoTrack1,isoEcal1,isoHcal1,pt2,eta2,phi2,Q2,type2,sigmaEtaEta2,HoverE2,isoTrack2,isoEcal2,isoHcal2"<<std::endl;
 }
 
 void 
